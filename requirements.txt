@@ -1,0 +1,4 @@
+requests~=2.32.3
+beautifulsoup4~=4.12.3
+python-gitlab~=5.6.0
+lxml~=5.3.2
