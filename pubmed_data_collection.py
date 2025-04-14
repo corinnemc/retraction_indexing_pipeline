@@ -421,10 +421,11 @@ def main(start_year: int, end_year: int, interval_year: int, term: str, email: s
 
 if __name__ == '__main__':
     main(start_year=1950,  # Via the PubMed interface, retracted publications start in 1951
+                           # https://pubmed.ncbi.nlm.nih.gov/?term="Retracted+Publication"[pt]
          end_year=date.today().year,
          interval_year=2,  # Chose a year interval where there are not more than 10,000 results returned;
                            # PubMed can only return 10,000 results per request.
-                           # In 2022 there were over 6,000 retractions, so best practice is using year interval of 2.
+                           # In 2022 there were over 6,000 retractions, so current best practice is year interval of 2.
          term="'Retracted Publication'[PT]",
          email="corinne9@illinois.edu",
          no_records=300)
