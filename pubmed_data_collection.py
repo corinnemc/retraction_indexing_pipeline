@@ -5,17 +5,16 @@ Functions overview:
 fetch_all_pmids: retrieves all PMIDs for a given search term by batching
     Uses sub-function retrieve_pmids
 retrieve_pmids: queries PubMed for PMIDs of a given search term in a given year range
-batch_pmids: cut list of PMIDs into batches
+batch_pmids: cuts list of PMIDs into batches
 retrieve_xml_data_from_metadata: queries PubMed for XML data for a given batch of PMIDs
 extract_retracted_paper_metadata: extracts desired information from XML for a given PMID
     Uses sub-functions get_authors_detail and get_retraction_notice
 get_authors_detail: extracts authors' names and affiliations
-get_retraction_notice: extracts journal title, retraction notice date, and retraction notice pmid
+get_retraction_notice: extracts journal title, retraction notice date, and retraction notice PMID
 """
 import csv
 import requests
 import time
-import lxml
 from bs4 import BeautifulSoup as bs
 from datetime import date
 
@@ -51,7 +50,7 @@ def fetch_all_pmids(term: str, start_year: int, end_year: int, interval_year: in
         total_pmids_count += count
         all_pmids += pmids_per_interval
 
-        print(f'{year} - {end_year}: {count} total number of retrieved pmids')
+        print(f'{year} - {end_year}: {count} total number of retrieved PMIDs')
 
     return total_pmids_count, all_pmids
 
@@ -374,18 +373,18 @@ def main(start_year: int, end_year: int, interval_year: int, term: str, email: s
         fetch_all_pmids(term=term, start_year=start_year, end_year=end_year, interval_year=interval_year, email=email)
 
     print(f'The total number of retracted publications between {start_year} and {end_year} is '
-          f'{total_retracted_publications} records in PubMed as of today {date.today()}')
-    print(f'After double check duplication, there are {len(set(retracted_paper_pmids))} records')
+          f'{total_retracted_publications} records in PubMed as of today {date.today()}.')
+    print(f'After double check duplication, there are {len(set(retracted_paper_pmids))} records.')
 
     pmids_batches = batch_pmids(retracted_paper_pmids, no_records)
 
-    print(f'The pmids are divided into {len(pmids_batches)} batches')
-    print(f'The complete pmid list is divided into lists each containing {no_records} records maximum')
+    print(f'The PMIDs are divided into {len(pmids_batches)} batches.')
+    print(f'The complete PMID list is divided into lists each containing {no_records} records maximum.')
 
     header = ['PubMedID', 'DOI', 'Year', 'Author', 'Au_Affiliation', 'Title', 'PubType',
               'Journal', 'JournalAbrv', 'RetractionPubMedID', 'RetractionNotice', 'RetractionOf']
 
-    outfile = open(f"data/pubmed_{str(date.today())}.csv", "w", encoding="utf-8", newline="")
+    outfile = open(f"data/{str(date.today())}_pubmed.csv", "w", encoding="utf-8", newline="")
     csvout = csv.writer(outfile)
     csvout.writerow(header)
 
@@ -415,11 +414,17 @@ def main(start_year: int, end_year: int, interval_year: int, term: str, email: s
 
     outfile.close()
 
+    print("Be sure to manually check some rows against PubMed database.")
+    print(f"Also check that current number of publications for that search term matches: "
+          f"{total_retracted_publications}")
+
 
 if __name__ == '__main__':
-    main(start_year=1950,
+    main(start_year=1950,  # Via the PubMed interface, retracted publications start in 1951
          end_year=date.today().year,
-         interval_year=10,
+         interval_year=2,  # Chose a year interval where there are not more than 10,000 results returned;
+                           # PubMed can only return 10,000 results per request.
+                           # In 2022 there were over 6,000 retractions, so best practice is using year interval of 2.
          term="'Retracted Publication'[PT]",
          email="corinne9@illinois.edu",
          no_records=300)
