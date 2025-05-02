@@ -3,13 +3,21 @@ This file contains methods to combine data from pubmed_{date}.csv and retraction
 
 Functions overview:
 convert_unicode: parses a string through various Unicode encoding options
-read_csv_files_and_clean: read previously-created csv files, create pandas dataframes, input some missing values
-check_individual_dataset: Clean and deduplicate records based on DOIs for Retraction Watch, PMIDs for PubMed.
-count_DOI_and_PMID: count DOIs and PMIDs and duplicates in a given dataframe
+clean_pubmed_data: read previously-created csv files, create pandas dataframes, standardize missing values
+clean_retraction_watch_data: read previously-created csv file, create pandas dataframe, standardize missing values
+check_individual_dataset_for_duplicates: Clean and deduplicate records based on DOIs for Retraction Watch, PMIDs for PubMed.
+count_DOI_and_PMID: count DOIs, PMIDs, and duplicates in a given dataframe
+create_overview_table: using counts above, creates an overview table of query totals and counts of interest
+export_datasets_from_sources: partitions each source (Retraction Watch and PubMed) into items with DOI, without DOI, and with
+duplicates
+save_records_in_subgroups: uses check_individual_dataset_for_duplicates and export_datasets_from_sources to iterate through
+sources and save separate csv files with items with DOI, without DOI, and with duplicates based on DOI
+create_union_list: create union list and save to .csv file, matching on DOI values
 """
 import numpy as np
 import unicodedata
 import pandas as pd
+from datetime import date
 
 
 def convert_unicode(string: str) -> str:
@@ -27,25 +35,44 @@ def convert_unicode(string: str) -> str:
     return string
 
 
-def read_csv_files_and_clean(pubmed_date: str, retraction_watch_date: str) -> pd.DataFrame:
+def clean_pubmed_data(pubmed_date: str) -> pd.DataFrame:
     """
-    Read in previously-gathered CSV files and return two pandas dataframes.
+    Read in previously-gathered CSV file and return cleaned pandas dataframe for PubMed.
 
     :param pubmed_date: date information was gathered from PubMed
-    :param retraction_watch_date: date information was gathered from Retraction Watch
+    :return: cleaned pandas dataframe
     """
-    pubmed = pd.read_csv(f"data/pubmed_{pubmed_date}.csv").rename(
+    pubmed = pd.read_csv(f"data/{pubmed_date}_pubmed.csv").rename(
         columns={'RetractionPubMedID': 'Retraction_Notice_PubMedID'})  # .drop(['Unnamed: 0'],axis=1
 
+    # Add column for target indicator
     pubmed['Indexed_In'] = 'PubMed'
+
+    # Extract only Retraction Year and make an integer value
     pubmed['Year'] = pubmed['Year'].str.split(':').str[0].astype(int)
+
+    # Convert DOI information from unicode
     pubmed['DOI'] = pubmed['DOI'].str.lower().str.strip().astype(str).apply(convert_unicode)
+
+    # Fill NA PubMed ID cells with 0, replace with empty string, make all PubMed IDs strings
     pubmed['PubMedID'] = pubmed['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str).str.strip()
+
+    # Fill NA Retraction Notice PubMed ID cells with 0, replace with empty string, make all PubMed IDs strings
     pubmed['Retraction_Notice_PubMedID'] = (pubmed['Retraction_Notice_PubMedID'].fillna(0).astype(int)
                                             .replace(0, '').astype(str))
 
-    retractionwatch = pd.read_csv(
-        f"data/retraction_watch_{retraction_watch_date}.csv", encoding='latin1'
+    return pubmed
+
+def clean_retraction_watch_data(retraction_watch_date: str) -> pd.DataFrame:
+    """
+    Read in previously-gathered CSV file and return cleaned pandas dataframe for Retraction Watch.
+
+    :param retraction_watch_date: date information was gathered from Retraction Watch
+    :return: cleaned pandas dataframe
+    """
+
+    retraction_watch = pd.read_csv(
+        f"data/{retraction_watch_date}_retraction_watch.csv", encoding='latin1'
     ).rename(
         columns={'OriginalPaperDOI': 'DOI',
                  'OriginalPaperPubMedID': 'PubMedID',
@@ -53,38 +80,40 @@ def read_csv_files_and_clean(pubmed_date: str, retraction_watch_date: str) -> pd
                  'RetractionPubMedID': 'Retraction_Notice_PubMedID'}
     )
 
-    retractionwatch['Indexed_In'] = 'Retraction Watch'
-    retractionwatch['PubMedID'] = retractionwatch['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str).str.strip()
-    retractionwatch['Retraction_Notice_PubMedID'] = retractionwatch['Retraction_Notice_PubMedID'].fillna(0).astype(int) \
+    # Add column for target indicator
+    retraction_watch['Indexed_In'] = 'Retraction Watch'
+
+    # Fill NA PubMed ID cells with 0, replace with empty string, make all PubMed IDs strings
+    retraction_watch['PubMedID'] = retraction_watch['PubMedID'].fillna(0).astype(int).replace(0, '').astype(
+        str).str.strip()
+
+    # Fill NA Retraction Notice PubMed ID cells with 0, replace with empty string, make all PubMed IDs strings
+    retraction_watch['Retraction_Notice_PubMedID'] = retraction_watch['Retraction_Notice_PubMedID'].fillna(0).astype(int) \
         .replace(0, '').astype(str)
 
-    retractionwatch.loc[retractionwatch['Year'] == '1/1/1753 12:00:00 AM', 'Year'] = '1/1/1753 00:00'
-    # 'Year' column time information for publication from 1753 was entered differently, causing dt.year to fail
-    retractionwatch['Year'] = pd.to_datetime(retractionwatch['Year']).dt.year
+    # Address single issue with date column causing dt.year to fail. Make Retraction Year an integer value
+    retraction_watch.loc[retraction_watch['Year'] == '1/1/1753 12:00:00 AM', 'Year'] = '1/1/1753 00:00'
+    retraction_watch['Year'] = pd.to_datetime(retraction_watch['Year']).dt.year
 
-    # A row in Retraction Watch contains '|', causing later issues
-    retractionwatch['DOI'] = retractionwatch['DOI'].str.replace(r'\|', '')  # "10.1038/embor.2009.88 |"
-    retractionwatch['DOI'] = retractionwatch['DOI'].str.lower().fillna('').str.strip().apply(convert_unicode)
+    # Address prior issue with | character listed in a DOI in Retraction Watch. Not currently an issue as of 5-1-2025.
+    # Covert DOI values from unicode
+    retraction_watch['DOI'] = retraction_watch['DOI'].str.replace(r'\|', '')  # "10.1038/embor.2009.88 |"
+    retraction_watch['DOI'] = retraction_watch['DOI'].str.lower().fillna('').str.strip().apply(convert_unicode)
+
+    return retraction_watch
 
 
-def check_individual_dataset(dataset) -> list:
+def check_individual_dataset_for_duplicates(dataset: pd.DataFrame) -> list:
     """
-    Clean and deduplicate records based on DOIs for Retraction Watch, PMIDs for PubMed.
+    Deduplicate records based on DOIs for Retraction Watch and PubMed.
     After removing duplicates, we will return the count and the list of records with DOI,
-    those without DOIs and duplicated records that will be dropped.
+    those without DOIs, and duplicated records that will be exported for later analysis.
 
-    :param dataset: dataset name as string, either "retractionwatch" or "pubmed"
+    :param dataset: dataframe, either "retraction_watch" or "pubmed"
     """
-
-    # Fixing '0.1080/20430795.2021.1894544' DOI error instead of '10.1080/20430795.2021.1894544',
-    # a peculiarity of Retraction Watch
 
     # Getting the DataFrame name
-    df_name = [name for name, obj in globals().items() if obj is dataset][0]
-
-    if df_name == 'retractionwatch':
-        if '10.1038/embor.2009.88 |' in list(dataset['DOI']):
-            dataset['DOI'] = dataset['DOI'].replace('10.1038/embor.2009.88 |', '10.1038/embor.2009.88')
+    df_name = [name for name, obj in globals().items() if obj is dataset]
 
     # Step 1: We identify the unique records of each dataset based on DOI.
     # 'records_with_DOI_has_dup': Identify records that have a valid DOI which should start with '10.'
@@ -92,6 +121,9 @@ def check_individual_dataset(dataset) -> list:
 
     records_with_DOI_has_dup = dataset.loc[dataset['DOI'].str.startswith('10.', na=False)]
 
+    # To remove record with PubMed ID 26511294 (row ~6700 and date listed as 1900)
+    # and leave record with PubMed ID 28202934 (row ~9675 and date listed as 2016) with correct date
+    # Both records have DOI 10.1057/jphp.2015.37
     if df_name == 'pubmed':
         records_with_DOI = records_with_DOI_has_dup.drop_duplicates(subset=['DOI'], keep='last')
     else:
@@ -99,12 +131,14 @@ def check_individual_dataset(dataset) -> list:
 
     # Step 2: We create two duplicate lists.
     # 'duplicated_records_all': Identify ALL duplicated records for reference and download for checking manually.
-    # 'duplicated_records': Identify duplicated records to drop but keep only
+    # 'duplicated_records_one_copy': Identify duplicated records to drop but keep only
     # the first occurrence of each group of duplicates.
     duplicate_records_all = \
         records_with_DOI_has_dup.loc[records_with_DOI_has_dup.duplicated(subset=['DOI'], keep=False), :]
 
-    # To check anamolies - to remove record with PubMedID 28202934 and leave that 26511294 with correct date
+    # To remove record with PubMed ID 26511294 (row ~6700 and date listed as 1900)
+    # and leave record with PubMed ID 28202934 (row ~9675 and date listed as 2016) with correct date
+    # Both records have DOI 10.1057/jphp.2015.37
     if df_name == 'pubmed':
         duplicate_records_one_copy = records_with_DOI_has_dup.loc[
                             records_with_DOI_has_dup.duplicated(subset=['DOI'], keep='last'),
@@ -138,37 +172,48 @@ def check_individual_dataset(dataset) -> list:
 def count_DOI_and_PubMedID(df, source) -> tuple:
     """
     :param df: DataFrame to work on
-    :param source: source/database to look up to determine number of count
+    :param source: source/database to look up to determine number of count, e.g. "Retraction Watch" or "Pubmed"
 
     :return: source, # DOI, # PubMedID, # Duplicated record -> list
     """
 
     df_DOI = df[(df['DOI'].str.startswith('10')) & (df['Indexed_In'].str.contains(source))]
 
-    df_no_dup_DOI = df_DOI.drop_duplicates(subset=['DOI'], keep='first')  # DF that has no duplicated DOIs
+    # DF that has no duplicated DOIs
+    df_no_dup_DOI = df_DOI.drop_duplicates(subset=['DOI'], keep='first')
 
-    df_duplicated_DOI = df_DOI[df_DOI.duplicated(subset=['DOI'], keep='last')]  # DF containing only duplicated DOIs
+    # DF containing only duplicated DOIs
+    df_duplicated_DOI = df_DOI[df_DOI.duplicated(subset=['DOI'], keep='last')]
 
-    df_no_DOI = df[~(df['DOI'].str.startswith('10')) & (df['Indexed_In'].str.contains(source))]  # DF that has no DOI
+    # DF that has no DOI
+    df_no_DOI = df[~(df['DOI'].str.startswith('10')) & (df['Indexed_In'].str.contains(source))]
 
-    nDOI = len(df_no_dup_DOI)  # Number of items with unique DOI
-    nDuplicatedDOI = len(df_duplicated_DOI)  # Number of items with duplicated DOIs
-    nNoDOI = len(df_no_DOI)  # Number of items without DOI
+    # Number of items with unique DOI
+    nDOI = len(df_no_dup_DOI)
+
+    # Number of items with duplicated DOIs
+    nDuplicatedDOI = len(df_duplicated_DOI)
+
+    # Number of items without DOI
+    nNoDOI = len(df_no_DOI)
 
     if 'PubMedID' in df.columns:
-
+        # DF of items with PMID
         df_PMID = df_DOI[
-            ((df_DOI['PubMedID'] != "") | ~df_DOI['PubMedID'].isna()) & (df_DOI['source'].str.contains(source))]
+            ((df_DOI['PubMedID'] != "") | ~df_DOI['PubMedID'].isna()) & (df_DOI['Indexed_In'].str.contains(source))]
 
-        df_no_dup_PMID = df_PMID.drop_duplicates(subset=['DOI'], keep='first')  # DF that has no duplicated PMID
+        # DF that has no duplicated PMID
+        df_no_dup_PMID = df_PMID.drop_duplicates(subset=['DOI'], keep='first')
 
-        df_duplicated_PMID = df_PMID[df_PMID.duplicated(subset=['DOI'], keep='last')]  # DF containing only duplicated PMIDs
+        # DF containing only duplicated PMIDs
+        df_duplicated_PMID = df_PMID[df_PMID.duplicated(subset=['DOI'], keep='last')]
 
-        df_no_PMID = df[~(((df['PubMedID'] != "") | ~df['PubMedID'].isna()) & (df['source'].str.contains(source)))]
+        # DF of items without PMID
+        df_no_PMID = df[~(((df['PubMedID'] != "") | ~df['PubMedID'].isna()) & (df['Indexed_In'].str.contains(source)))]
 
         nPMID = len(df_no_dup_PMID)  # Number of items with unique PMID
         nDuplicatedPMID = len(df_duplicated_PMID)  # Number of items that has duplicated PMID
-        nNoPMID = len(df_no_PMID)  # Numbers of items with without PMID
+        nNoPMID = len(df_no_PMID)  # Numbers of items without PMID
 
     else:
         nPMID, nDuplicatedPMID, nNoPMID = 0, 0, 0
@@ -179,7 +224,7 @@ def count_DOI_and_PubMedID(df, source) -> tuple:
     # nDuplicateDOI,nPubMedID,nDuplicatePubMedID
 
 
-def create_overview_table(pubmed: pd.DataFrame, retraction_watch: pd.DataFrame) -> pd.DataFrame:
+def create_overview_table(pubmed: pd.DataFrame, retraction_watch: pd.DataFrame):
     """
     Creates an overview table with duplicate tracking.
     :param pubmed: dataframe containing retracted publications from PubMed
@@ -190,12 +235,11 @@ def create_overview_table(pubmed: pd.DataFrame, retraction_watch: pd.DataFrame) 
     nRW = count_DOI_and_PubMedID(retraction_watch, 'Retraction Watch')
 
     dbtable = []  # A nested list which stores the records of each group in each source
-    ovtable = []  # Store the count of each group from each source and create a table for viewing
 
     dblist = [nPubMed, nRW]
 
-    # Query results retrieved	Records with DOI	Records without DOI removed	Duplicate records removed
-    # source,Total, nDOI,nNoDOI,nDuplicatedDOI,nPMID,nNoPMID,nDuplicatedPMID
+    # Order of returned values from count_DOI_and_PubMedID function
+    # source, Total, nDOI, nNoDOI, nDuplicatedDOI, nPMID, nNoPMID, nDuplicatedPMID
     for result in dblist:
         dbtable.append(result)
 
@@ -219,3 +263,95 @@ def create_overview_table(pubmed: pd.DataFrame, retraction_watch: pd.DataFrame) 
                                    overview.DOI_records_withPubMedID.astype(int).sum(), ]
 
     overview.to_csv('data/datasources_overview.csv')
+
+
+def export_datasets_from_sources(source_list: list, dbtable: list, source_names: list):
+    """
+    Helper function to filter records with DOI, without DOI, and those with duplicated DOIs
+    for each source and save each file. To be used in conjunction with check_individual_dataset_for_duplicates()
+
+    :param source_list: Dataframes for each source
+    :param dbtable: A nested list which stores the records of each group (DOI, no DOI, duplicated DOI) in each source
+    :param source_names: list of source names in order
+    :return: It will for each source return:
+            - records with doi (saved as in this format: 'source_name_recordswithdoi_date.csv')
+            - records without doi (saved as in this format: 'source_name_recordsnodoi_date.csv')
+            - duplicated doi records (saved as in this format: 'source_name_duplicatedrecords_date.csv')
+    """
+
+    for i in range(len(source_list[:])):
+        source_name = source_names[i]
+
+        date_used = str(date.today())
+
+        dbtable[i][4].sort_values(by=['DOI'], ascending=False).to_csv(
+            f'data/{source_name}_recordswithdoi_{date_used}.csv'
+        )
+        dbtable[i][5].to_csv(
+            f'data/{source_name}_recordsnodoi_{date_used}.csv'
+        )
+        dbtable[i][6].sort_values(by=['DOI'], ascending=False).to_csv(
+            f'data/{source_name}_duplicatedrecords_{date_used}.csv'
+        )
+
+
+def save_records_in_subgroups(dataframe_list: list, source_names: list):
+    """
+    Iterates through dataframes to partition into groups of records with DOI, without DOI, and those with duplicated DOIs.
+    :param dataframe_list: list of dataframe objects to iterate through
+    :param source_names: list of string source names in same order as dataframe_list
+    :return: exported csv files
+    """
+    nested_groups_list = []  # A nested list which stores the records of each group in each source
+
+    for x in dataframe_list[:]:
+        nested_groups_list.append(check_individual_dataset_for_duplicates(x))
+
+    export_datasets_from_sources(dataframe_list[:], nested_groups_list, source_names)
+
+
+def create_union_list():
+    pubmed_retracted = pd.read_csv(f'data/pubmed_recordswithdoi_{str(date.today())}.csv')
+    retraction_watch_retracted = pd.read_csv(f'data/retraction_watch_recordswithdoi_{str(date.today())}.csv')
+
+    retracted_sources = [pubmed_retracted, retraction_watch_retracted]
+    merged_with_doi = pd.concat(retracted_sources)
+
+    # Only keep selected columns for unionlist
+    merged_with_doi = (merged_with_doi[['DOI', 'Author', 'Title', 'Year', 'Journal', 'Indexed_In', 'PubMedID']]
+                       .sort_values(by='DOI'))
+
+    # Check consistency of number of records
+    if len(merged_with_doi) == (len(pubmed_retracted) + len(retraction_watch_retracted)):
+        print('Full record count:', len(merged_with_doi))
+    else:
+        print('ERROR: Inconsistent Counts')
+
+    # Confirm column "Indexed_In" is string
+    merged_with_doi['Indexed_In'] = merged_with_doi['Indexed_In'].astype(str)
+
+    union_list = merged_with_doi.groupby('DOI').agg({'Author': 'first',
+                                                     'Title': 'last',
+                                                     'Year': 'first',
+                                                     'Journal': 'last',
+                                                     'Indexed_In': '; '.join,
+                                                     'PubMedID': 'first'}).reset_index()
+
+    union_list['PubMedID'] = union_list['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str)
+
+    union_list.to_csv(f'data/unionlist_{str(date.today())}.csv')
+
+
+def main():
+    pubmed = clean_pubmed_data(pubmed_date='2025-04-13')
+    retraction_watch = clean_retraction_watch_data(retraction_watch_date='2025-04-13')
+
+    create_overview_table(pubmed=pubmed, retraction_watch=retraction_watch)
+
+    save_records_in_subgroups(dataframe_list=[pubmed, retraction_watch], source_names=['pubmed', 'retraction_watch'])
+
+    create_union_list()
+
+
+if __name__ == '__main__':
+    main()
