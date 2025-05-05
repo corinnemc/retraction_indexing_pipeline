@@ -282,16 +282,16 @@ def export_datasets_from_sources(source_list: list, dbtable: list, source_names:
     for i in range(len(source_list[:])):
         source_name = source_names[i]
 
-        date_used = str(date.today())
+        date_run = str(date.today())
 
         dbtable[i][4].sort_values(by=['DOI'], ascending=False).to_csv(
-            f'data/{source_name}_recordswithdoi_{date_used}.csv'
+            f'data/{source_name}_recordswithdoi_{date_run}.csv'
         )
         dbtable[i][5].to_csv(
-            f'data/{source_name}_recordsnodoi_{date_used}.csv'
+            f'data/{source_name}_recordsnodoi_{date_run}.csv'
         )
         dbtable[i][6].sort_values(by=['DOI'], ascending=False).to_csv(
-            f'data/{source_name}_duplicatedrecords_{date_used}.csv'
+            f'data/{source_name}_duplicatedrecords_{date_run}.csv'
         )
 
 
@@ -314,32 +314,53 @@ def create_union_list():
     pubmed_retracted = pd.read_csv(f'data/pubmed_recordswithdoi_{str(date.today())}.csv')
     retraction_watch_retracted = pd.read_csv(f'data/retraction_watch_recordswithdoi_{str(date.today())}.csv')
 
-    retracted_sources = [pubmed_retracted, retraction_watch_retracted]
-    merged_with_doi = pd.concat(retracted_sources)
+    merged_df_with_conflicts = pd.merge(pubmed_retracted,
+                                        retraction_watch_retracted,
+                                        on='DOI',
+                                        how='outer',
+                                        indicator=True)
+    merged_df_with_conflicts.rename(columns={'_merge': 'Merge'}, inplace=True)
 
-    # Only keep selected columns for unionlist
-    merged_with_doi = (merged_with_doi[['DOI', 'Author', 'Title', 'Year', 'Journal', 'Indexed_In', 'PubMedID']]
-                       .sort_values(by='DOI'))
+    # Set up DataFrame
+    fused_df = pd.DataFrame(columns=["DOI", "Author", "Title", "Year", "Journal", "PubMedID", "Indexed_In"])
 
-    # Check consistency of number of records
-    if len(merged_with_doi) == (len(pubmed_retracted) + len(retraction_watch_retracted)):
-        print('Full record count:', len(merged_with_doi))
-    else:
-        print('ERROR: Inconsistent Counts')
+    # Merge data sources. In cases where conflicts exist,
+    # PubMed data was used (row.COLUMN_x, left DataFrame in original merge).
+    for row in merged_df_with_conflicts.itertuples():
+        if row.Merge == 'both':
+            new_row = {'DOI': row.DOI,
+                       'Author': row.Author_x,
+                       'Title': row.Title_x,
+                       'Year': row.Year_x,
+                       'Journal': row.Journal_x,
+                       'PubMedID': row.PubMedID_x,
+                       'Indexed_In': "Retraction Watch; PubMed"}
+        elif row.Merge == 'left_only':
+            new_row = {'DOI': row.DOI,
+                       'Author': row.Author_x,
+                       'Title': row.Title_x,
+                       'Year': row.Year_x,
+                       'Journal': row.Journal_x,
+                       'PubMedID': row.PubMedID_x,
+                       'Indexed_In': "PubMed"}
+        elif row.Merge == 'right_only':
+            new_row = {'DOI': row.DOI,
+                       'Author': row.Author_y,
+                       'Title': row.Title_y,
+                       'Year': row.Year_y,
+                       'Journal': row.Journal_y,
+                       'PubMedID': row.PubMedID_y,
+                       'Indexed_In': "Retraction Watch"}
+        fused_df.loc[len(fused_df)] = new_row
 
-    # Confirm column "Indexed_In" is string
-    merged_with_doi['Indexed_In'] = merged_with_doi['Indexed_In'].astype(str)
+    # Confirm column "Indexed_In" is string and "Year" is int
+    fused_df['Indexed_In'] = fused_df['Indexed_In'].astype(str)
+    fused_df['Year'] = fused_df['Year'].astype(int)
 
-    union_list = merged_with_doi.groupby('DOI').agg({'Author': 'first',
-                                                     'Title': 'last',
-                                                     'Year': 'first',
-                                                     'Journal': 'last',
-                                                     'Indexed_In': '; '.join,
-                                                     'PubMedID': 'first'}).reset_index()
+    # Remove NA values from PubMedID column
+    fused_df['PubMedID'] = fused_df['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str)
 
-    union_list['PubMedID'] = union_list['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str)
-
-    union_list.to_csv(f'data/unionlist_{str(date.today())}.csv')
+    fused_df.to_csv(f'data/unionlist_{str(date.today())}.csv')
 
 
 def main():
