@@ -17,7 +17,6 @@ import requests
 import time
 from bs4 import BeautifulSoup as bs
 from datetime import date
-
 from tqdm import tqdm
 
 
@@ -70,7 +69,6 @@ def retrieve_pmids(term: str, mindate: int, maxdate: int, email: str) -> tuple:
     api_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 
     # Step 1: Search for retracted papers
-
     params = {
         "db": "pubmed",
         "term": term,
