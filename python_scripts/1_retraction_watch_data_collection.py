@@ -4,6 +4,7 @@ is available as a bulk download from Retraction Watch via GitLab.
 
 Functions overview:
 get_gitlab_file_and_sha: download file from GitLab and validate using provided SHA value
+main: runs get_gitlab_file_and_sha with varied parameters
 """
 from datetime import date
 import requests
@@ -13,6 +14,12 @@ import base64
 
 
 def get_gitlab_file_and_sha(path, expected_commit_id):
+    """
+    This function downloads the Retraction Watch dataset from Crossref's GitLab and validates using the provided
+    GitLab commit SHA value
+    :param path: path where the dataset should be saved
+    :param expected_commit_id: expected commit ID from GitLab
+    """
     if not os.path.exists(path):
         base_dir = os.path.dirname(path)
         print(f"Creating directory for {path}")
@@ -59,8 +66,8 @@ def get_gitlab_file_and_sha(path, expected_commit_id):
 
 
 def main():
-    data_path = f"data"
-    commit_id = "66e357c8ec0d2692686bc82864be65afaf16e1d8"
+    data_path = f"../data"
+    commit_id = "6bea2b44d7521a4d9567148523756530eadfa194"
     get_gitlab_file_and_sha(data_path, commit_id)
 
 

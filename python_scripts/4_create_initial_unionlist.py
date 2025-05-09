@@ -1,18 +1,19 @@
 """
-This file contains methods to combine data from pubmed_{date}.csv and retraction_watch_{date}.csv into one unionlist.
+This file contains methods to combine data from {data}_pubmed.csv and {date}_retraction_watch.csv into one unionlist.
 
 Functions overview:
 convert_unicode: parses a string through various Unicode encoding options
-clean_pubmed_data: read previously-created csv files, create pandas dataframes, standardize missing values
+clean_pubmed_data: read previously-created csv file, create pandas dataframes, standardize missing values
 clean_retraction_watch_data: read previously-created csv file, create pandas dataframe, standardize missing values
-check_individual_dataset_for_duplicates: Clean and deduplicate records based on DOIs for Retraction Watch, PMIDs for PubMed.
+check_individual_dataset_for_duplicates: Clean and deduplicate records based on DOIs for Retraction Watch and PubMed.
 count_DOI_and_PMID: count DOIs, PMIDs, and duplicates in a given dataframe
 create_overview_table: using counts above, creates an overview table of query totals and counts of interest
-export_datasets_from_sources: partitions each source (Retraction Watch and PubMed) into items with DOI, without DOI, and with
-duplicates
+export_datasets_from_sources: helper function to partition each source (Retraction Watch and PubMed) into items
+with DOI, without DOI, and with duplicates
 save_records_in_subgroups: uses check_individual_dataset_for_duplicates and export_datasets_from_sources to iterate through
 sources and save separate csv files with items with DOI, without DOI, and with duplicates based on DOI
 create_union_list: create union list and save to .csv file, matching on DOI values
+main: runs full script to create union list, with variable parameters
 """
 import numpy as np
 import unicodedata
@@ -42,7 +43,7 @@ def clean_pubmed_data(pubmed_date: str) -> pd.DataFrame:
     :param pubmed_date: date information was gathered from PubMed
     :return: cleaned pandas dataframe
     """
-    pubmed = pd.read_csv(f"data/{pubmed_date}_pubmed.csv").rename(
+    pubmed = pd.read_csv(f"../data/{pubmed_date}_pubmed.csv").rename(
         columns={'RetractionPubMedID': 'Retraction_Notice_PubMedID'})  # .drop(['Unnamed: 0'],axis=1
 
     # Add column for target indicator
@@ -63,6 +64,7 @@ def clean_pubmed_data(pubmed_date: str) -> pd.DataFrame:
 
     return pubmed
 
+
 def clean_retraction_watch_data(retraction_watch_date: str) -> pd.DataFrame:
     """
     Read in previously-gathered CSV file and return cleaned pandas dataframe for Retraction Watch.
@@ -72,7 +74,7 @@ def clean_retraction_watch_data(retraction_watch_date: str) -> pd.DataFrame:
     """
 
     retraction_watch = pd.read_csv(
-        f"data/{retraction_watch_date}_retraction_watch.csv", encoding='latin1'
+        f"../data/{retraction_watch_date}_retraction_watch.csv", encoding='latin1'
     ).rename(
         columns={'OriginalPaperDOI': 'DOI',
                  'OriginalPaperPubMedID': 'PubMedID',
@@ -262,7 +264,7 @@ def create_overview_table(pubmed: pd.DataFrame, retraction_watch: pd.DataFrame):
                                    overview.Duplicate_DOI_removed.astype(int).sum(),
                                    overview.DOI_records_withPubMedID.astype(int).sum(), ]
 
-    overview.to_csv('data/datasources_overview.csv')
+    overview.to_csv('../data/datasources_overview.csv')
 
 
 def export_datasets_from_sources(source_list: list, dbtable: list, source_names: list):
@@ -274,9 +276,9 @@ def export_datasets_from_sources(source_list: list, dbtable: list, source_names:
     :param dbtable: A nested list which stores the records of each group (DOI, no DOI, duplicated DOI) in each source
     :param source_names: list of source names in order
     :return: It will for each source return:
-            - records with doi (saved as in this format: 'source_name_recordswithdoi_date.csv')
-            - records without doi (saved as in this format: 'source_name_recordsnodoi_date.csv')
-            - duplicated doi records (saved as in this format: 'source_name_duplicatedrecords_date.csv')
+            - records with doi (saved in this format: 'source_name_recordswithdoi_date.csv')
+            - records without doi (saved in this format: 'source_name_recordsnodoi_date.csv')
+            - duplicated doi records (saved in this format: 'source_name_duplicatedrecords_date.csv')
     """
 
     for i in range(len(source_list[:])):
@@ -285,13 +287,13 @@ def export_datasets_from_sources(source_list: list, dbtable: list, source_names:
         date_run = str(date.today())
 
         dbtable[i][4].sort_values(by=['DOI'], ascending=False).to_csv(
-            f'data/{source_name}_recordswithdoi_{date_run}.csv'
+            f'../data/{source_name}_recordswithdoi_{date_run}.csv'
         )
         dbtable[i][5].to_csv(
-            f'data/{source_name}_recordsnodoi_{date_run}.csv'
+            f'../data/{source_name}_recordsnodoi_{date_run}.csv'
         )
         dbtable[i][6].sort_values(by=['DOI'], ascending=False).to_csv(
-            f'data/{source_name}_duplicatedrecords_{date_run}.csv'
+            f'../data/{source_name}_duplicatedrecords_{date_run}.csv'
         )
 
 
@@ -311,8 +313,12 @@ def save_records_in_subgroups(dataframe_list: list, source_names: list):
 
 
 def create_union_list():
-    pubmed_retracted = pd.read_csv(f'data/pubmed_recordswithdoi_{str(date.today())}.csv')
-    retraction_watch_retracted = pd.read_csv(f'data/retraction_watch_recordswithdoi_{str(date.today())}.csv')
+    """
+    Creates union list from all sources, matching on DOI, and saves to .csv value
+    :return: union list csv file
+    """
+    pubmed_retracted = pd.read_csv(f'../data/pubmed_recordswithdoi_{str(date.today())}.csv')
+    retraction_watch_retracted = pd.read_csv(f'../data/retraction_watch_recordswithdoi_{str(date.today())}.csv')
 
     merged_df_with_conflicts = pd.merge(pubmed_retracted,
                                         retraction_watch_retracted,
@@ -326,6 +332,12 @@ def create_union_list():
 
     # Merge data sources. In cases where conflicts exist,
     # PubMed data was used (row.COLUMN_x, left DataFrame in original merge).
+
+    # PubMed has been show to be more reliable for metadata aside from retraction indexing. See:
+    # Paul Sebo & Melissa Sebo (20 Feb 2025): Assessing database accuracy for article retractions:
+    # A preliminary study comparing Retraction Watch Database, PubMed, and Web of Science,
+    # Accountability in Research, DOI: 10.1080/08989621.2025.2465621
+    # Particularly, supplemental materials.
     for row in merged_df_with_conflicts.itertuples():
         if row.Merge == 'both':
             new_row = {'DOI': row.DOI,
@@ -360,17 +372,22 @@ def create_union_list():
     # Remove NA values from PubMedID column
     fused_df['PubMedID'] = fused_df['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str)
 
-    fused_df.to_csv(f'data/unionlist_{str(date.today())}.csv')
+    fused_df.to_csv(f'../data/{str(date.today())}_unionlist.csv')
 
 
 def main():
-    pubmed = clean_pubmed_data(pubmed_date='2025-04-13')
-    retraction_watch = clean_retraction_watch_data(retraction_watch_date='2025-04-13')
+    print("Reading in datasets...")
+    pubmed = clean_pubmed_data(pubmed_date='2025-05-08')
+    retraction_watch = clean_retraction_watch_data(retraction_watch_date='2025-05-08')
 
+    print("Creating overview table...")
     create_overview_table(pubmed=pubmed, retraction_watch=retraction_watch)
 
+    print("Saving records with DOI, without DOI, and duplicates in separate files...")
     save_records_in_subgroups(dataframe_list=[pubmed, retraction_watch], source_names=['pubmed', 'retraction_watch'])
 
+    print("Merging records with DOI into union list...")
+    print("This can take some time as the program iterates over thousands of rows.")
     create_union_list()
 
 

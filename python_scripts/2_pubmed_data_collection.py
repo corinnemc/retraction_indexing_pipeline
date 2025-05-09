@@ -1,5 +1,5 @@
 """
-This file contains methods to collect information about retracted items from PubMed
+This file contains methods to collect information about retracted items from PubMed.
 
 Functions overview:
 fetch_all_pmids: retrieves all PMIDs for a given search term by batching
@@ -11,6 +11,7 @@ extract_retracted_paper_metadata: extracts desired information from XML for a gi
     Uses sub-functions get_authors_detail and get_retraction_notice
 get_authors_detail: extracts authors' names and affiliations
 get_retraction_notice: extracts journal title, retraction notice date, and retraction notice PMID
+get_pubmed_data: extracts all retracted publication information from PubMed and saves it to csv. Parameters can be varied.
 """
 import csv
 import requests
@@ -355,7 +356,7 @@ def get_retraction_notice(soup: bs):
     return retraction_notice_detail, retraction_notice_pmid
 
 
-def main(start_year: int, end_year: int, interval_year: int, term: str, email: str, no_records: int):
+def get_pubmed_data(start_year: int, end_year: int, interval_year: int, term: str, email: str, no_records: int):
     """
     It extracts all retracted publication information from PubMed.
 
@@ -382,7 +383,7 @@ def main(start_year: int, end_year: int, interval_year: int, term: str, email: s
     header = ['PubMedID', 'DOI', 'Year', 'Author', 'Au_Affiliation', 'Title', 'PubType',
               'Journal', 'JournalAbrv', 'RetractionPubMedID', 'RetractionNotice', 'RetractionOf']
 
-    outfile = open(f"data/{str(date.today())}_pubmed.csv", "w", encoding="utf-8", newline="")
+    outfile = open(f"../data/{str(date.today())}_pubmed.csv", "w", encoding="utf-8", newline="")
     csvout = csv.writer(outfile)
     csvout.writerow(header)
 
@@ -418,12 +419,14 @@ def main(start_year: int, end_year: int, interval_year: int, term: str, email: s
 
 
 if __name__ == '__main__':
-    main(start_year=1950,  # Via the PubMed interface, retracted publications start in 1951
-                           # https://pubmed.ncbi.nlm.nih.gov/?term="Retracted+Publication"[pt]
-         end_year=date.today().year,
-         interval_year=2,  # Chose a year interval where there are not more than 10,000 results returned;
-                           # PubMed can only return 10,000 results per request.
-                           # In 2022 there were over 6,000 retractions, so current best practice is year interval of 2.
-         term="'Retracted Publication'[PT]",
-         email="corinne9@illinois.edu",
-         no_records=300)
+    get_pubmed_data(
+        start_year=1950,  # Via the PubMed interface, retracted publications start in 1951
+                          # https://pubmed.ncbi.nlm.nih.gov/?term="Retracted+Publication"[pt]
+        end_year=date.today().year,
+        interval_year=2,  # Chose a year interval where there are not more than 10,000 results returned;
+                          # PubMed can only return 10,000 results per request.
+                          # In 2022 there were over 6,000 retractions, so current best practice is year interval of 2.
+        term="'Retracted Publication'[PT]",
+        email="corinne9@illinois.edu",
+        no_records=300
+    )

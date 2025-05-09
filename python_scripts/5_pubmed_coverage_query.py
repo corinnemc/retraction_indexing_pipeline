@@ -1,27 +1,34 @@
 """
-This file contains methods to collect information about items that are indexed as retracted in Retraction Watch (but not
-in PubMed) to see if PubMed covers these items.
+This file contains methods to collect information about items that are indexed as retracted in Retraction Watch but not
+in PubMed to see if PubMed covers these items.
 
 Functions overview:
+read_in_unionlist: read in existing unionlist csv file and correct data type issues
 gather_pubmed_not_indexed(): gets items that are not indexed as retracted in PubMed but
  are indexed as retracted in Retraction Watch
-batch_pmids(): divides a list of pmids into batches for processing.
-
+batch_items(): divides a list of PMIDs into batches for processing.
+check_pubmed_via_identifier(): queries PubMed for information via a given identifier
+query_pubmed_with_doi(): used in conjunction with batch_items() and check_pubmed_via_identifier() to query PubMed for
+  coverage using DOIs. This currently does not return expected results and is not used.
+query_pubmed_with_pmid(): used in conjunction with batch_items() and check_pubmed_via_identifier() to query PubMed for
+  coverage using DOIs
+main(): queries PubMed for coverage with variable parameters
 
 """
 import pandas as pd
 from datetime import date
 import requests
 import time
+from tqdm import tqdm
 
 
-def read_in_unionlist(date: str):
+def read_in_unionlist(unionlist_date: str):
     """
     Read unionlist into dataframe and correct datatype issues
-    :param date: date of current unionlist
-    :return:
+    :param unionlist_date: date of current unionlist
+    :return: unionlist dataframe
     """
-    unionlist = pd.read_csv(f'data/unionlist_{date}.csv')
+    unionlist = pd.read_csv(f'../data/{unionlist_date}_unionlist.csv')
 
     # Address possible pandas datatype issues
     unionlist['PubMedID'] = unionlist['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str).str.strip()
@@ -92,6 +99,7 @@ def check_pubmed_via_identifier(identifiers: list, email: str):
 
 def query_pubmed_with_doi(pubmed_not_indexed: pd.DataFrame, email: str):
     """
+    DO NOT USE, DOES NOT RETURN EXPECTED RESULTS
     Queries PubMed in batches using DOI as the identifier
     :param pubmed_not_indexed: dataframe with items that are not indexed as retracted in PubMed
     :param email: email to link to request
@@ -100,19 +108,26 @@ def query_pubmed_with_doi(pubmed_not_indexed: pd.DataFrame, email: str):
     identifier_list = list(set(pubmed_not_indexed['DOI']))
     print(f"The total unique number of items to check coverage in PubMed is {len(identifier_list)}")
 
-    identifier_batches = batch_items(identifier_list, 100)
+    identifier_batches = batch_items(identifier_list, 50)
 
     items_covered_not_indexed = []
 
-    for batch in identifier_batches:
-        dois = ','.join(batch)
+    for batch in tqdm(identifier_batches):
+        dois = '[ELocationID]" OR "'.join(batch)
+            # AID is Article Identifier.
+            # "Article ID values supplied by the publisher may include the pii (controlled publisher identifier),
+            # doi (digital object identifier), or book accession" https://pubmed.ncbi.nlm.nih.gov/help/
+
+            # ELocationID is Electronic Location Identifier.
+            # This "is used when an article does not have a FirstPage value OR to include the online location of
+            # the article." https://www.ncbi.nlm.nih.gov/books/NBK3828/#publisherhelp.ELocationID_OR
 
         # Checking the items in PubMed
         result = check_pubmed_via_identifier(identifiers=dois, email=email)
-        time.sleep(10)
+        time.sleep(0.33)
         print(result)
         items_covered_not_indexed += result['esearchresult']['idlist']
-        print(items_covered_not_indexed)
+        # print(items_covered_not_indexed)
 
     return items_covered_not_indexed
 
@@ -145,7 +160,7 @@ def query_pubmed_with_pmid(pubmed_not_indexed: pd.DataFrame, email: str):
 
 
 def main():
-    unionlist = read_in_unionlist(date='2025-05-04')
+    unionlist = read_in_unionlist(unionlist_date='2025-05-08')
     pubmed_not_indexed = gather_pubmed_not_indexed(unionlist=unionlist)
     items_covered_not_indexed = query_pubmed_with_pmid(pubmed_not_indexed=pubmed_not_indexed,
                                                        email='corinne9@illinois.edu')
@@ -155,9 +170,10 @@ def main():
                                 (~unionlist['Indexed_In'].str.contains('PubMed'))
     ]
 
+    print("A SettingWithCopyWarning will be displayed. This can be ignored.")
     pubmed_not_in_unionlist["Covered_In"] = "Retraction Watch; PubMed"
 
-    pubmed_not_in_unionlist.to_csv(f'data/pubmed_coverednotindexed_{str(date.today())}.csv')
+    pubmed_not_in_unionlist.to_csv(f'../data/pubmed_coverednotindexed_{str(date.today())}.csv')
 
 
 if __name__ == '__main__':
