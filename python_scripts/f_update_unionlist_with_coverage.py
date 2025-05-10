@@ -2,14 +2,14 @@
 This file contains methods to update the unionlist with a "Covered_In" column using csv files that note coverage.
 
 Functions:
-read_in_unionlist(): reads unionlist into DataFrame and corrects data type issues
+read_in_unionlist_without_coverage(): reads unionlist into DataFrame and corrects data type issues
 read_in_covered_not_indexed(): reads pubmed_coverednotindexed into DataFrame and corrects datatype issues
 merge_dataframes(): merges unionlist and pubmed_coverednotindexed dataframes to add coverage information to unionlist
 """
 import pandas as pd
 
 
-def read_in_unionlist(unionlist_date: str):
+def read_in_unionlist_without_coverage(unionlist_date: str):
     """
     Read unionlist into dataframe and correct datatype issues
     :param unionlist_date: date of current unionlist
@@ -94,7 +94,7 @@ def merge_dataframes(unionlist: pd.DataFrame, pubmed_covered_not_indexed: pd.Dat
 
 def main():
     print("Reading in data...")
-    unionlist = read_in_unionlist(unionlist_date='2025-05-08')
+    unionlist = read_in_unionlist_without_coverage(unionlist_date='2025-05-08')
     pubmed_covered_not_indexed = read_in_covered_not_indexed(pubmed_date='2025-05-08')
 
     print("Merging dataframes...")

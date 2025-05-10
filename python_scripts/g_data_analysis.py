@@ -2,7 +2,7 @@
 This file contains methods to complete data analysis to create visualizations and answer research questions.
 
 Functions:
-read_in_unionlist(): reads unionlist into DataFrame and corrects data type issues
+read_in_unionlist_with_coverage(): reads unionlist with coverage information into DataFrame and corrects data type issues
 partition_by_source(): returns partitioned DataFrames containing items that a given source indexes, covers,
     covers but does not index, and does not cover
 create_results_table(): aggregates result information using helper function partition_by_source()
@@ -18,7 +18,7 @@ from upsetplot import from_contents, plot
 from datetime import date
 
 
-def read_in_unionlist(unionlist_date: str):
+def read_in_unionlist_with_coverage(unionlist_date: str):
     """
     Read unionlist into dataframe and correct datatype issues
     :param unionlist_date: date of current unionlist
@@ -193,7 +193,8 @@ def create_coverage_upset_plot(pubmed_covered: pd.DataFrame, retraction_watch_co
 
 
 def main():
-    unionlist = read_in_unionlist(unionlist_date='2025-05-08')
+    print("Several future warnings will be displayed. These can be ignored.")
+    unionlist = read_in_unionlist_with_coverage(unionlist_date='2025-05-08')
     (pubmed_indexed,
      pubmed_covered,
      pubmed_covered_not_indexed,

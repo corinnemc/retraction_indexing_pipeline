@@ -2,16 +2,18 @@
 This file contains methods to collect information about retracted items from PubMed.
 
 Functions overview:
-fetch_all_pmids: retrieves all PMIDs for a given search term by batching
+fetch_all_pmids(): retrieves all PMIDs for a given search term by batching
     Uses sub-function retrieve_pmids
-retrieve_pmids: queries PubMed for PMIDs of a given search term in a given year range
-batch_pmids: cuts list of PMIDs into batches
-retrieve_xml_data_from_metadata: queries PubMed for XML data for a given batch of PMIDs
-extract_retracted_paper_metadata: extracts desired information from XML for a given PMID
+retrieve_pmids(): queries PubMed for PMIDs of a given search term in a given year range
+batch_pmids(): cuts list of PMIDs into batches
+retrieve_xml_data_from_metadata(): queries PubMed for XML data for a given batch of PMIDs
+extract_retracted_paper_metadata(): extracts desired information from XML for a given PMID
     Uses sub-functions get_authors_detail and get_retraction_notice
-get_authors_detail: extracts authors' names and affiliations
-get_retraction_notice: extracts journal title, retraction notice date, and retraction notice PMID
-get_pubmed_data: extracts all retracted publication information from PubMed and saves it to csv. Parameters can be varied.
+get_authors_detail(): extracts authors' names and affiliations
+get_retraction_notice(): extracts journal title, retraction notice date, and retraction notice PMID
+get_pubmed_data: extracts all retracted publication information from PubMed and saves it to csv.
+    Parameters can be varied.
+main()
 """
 import csv
 import requests
@@ -418,7 +420,7 @@ def get_pubmed_data(start_year: int, end_year: int, interval_year: int, term: st
           f"{total_retracted_publications}")
 
 
-if __name__ == '__main__':
+def main():
     get_pubmed_data(
         start_year=1950,  # Via the PubMed interface, retracted publications start in 1951
                           # https://pubmed.ncbi.nlm.nih.gov/?term="Retracted+Publication"[pt]
@@ -430,3 +432,7 @@ if __name__ == '__main__':
         email="INSERT_EMAIL_HERE",
         no_records=300
     )
+
+
+if __name__ == '__main__':
+    main()

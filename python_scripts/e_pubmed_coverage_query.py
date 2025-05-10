@@ -3,7 +3,7 @@ This file contains methods to collect information about items that are indexed a
 in PubMed to see if PubMed covers these items.
 
 Functions overview:
-read_in_unionlist: read in existing unionlist csv file and correct data type issues
+read_in_unionlist_without_coverage: read in existing unionlist csv file and correct data type issues
 gather_pubmed_not_indexed(): gets items that are not indexed as retracted in PubMed but
  are indexed as retracted in Retraction Watch
 batch_items(): divides a list of PMIDs into batches for processing.
@@ -22,7 +22,7 @@ import time
 from tqdm import tqdm
 
 
-def read_in_unionlist(unionlist_date: str):
+def read_in_unionlist_without_coverage(unionlist_date: str):
     """
     Read unionlist into dataframe and correct datatype issues
     :param unionlist_date: date of current unionlist
@@ -160,7 +160,7 @@ def query_pubmed_with_pmid(pubmed_not_indexed: pd.DataFrame, email: str):
 
 
 def main():
-    unionlist = read_in_unionlist(unionlist_date='2025-05-08')
+    unionlist = read_in_unionlist_without_coverage(unionlist_date='2025-05-08')
     pubmed_not_indexed = gather_pubmed_not_indexed(unionlist=unionlist)
     items_covered_not_indexed = query_pubmed_with_pmid(pubmed_not_indexed=pubmed_not_indexed,
                                                        email='INSERT_EMAIL_HERE')

@@ -40,7 +40,7 @@ def clean_pubmed_data(pubmed_date: str) -> pd.DataFrame:
     """
     Read in previously-gathered CSV file and return cleaned pandas dataframe for PubMed.
 
-    :param pubmed_date: date information was gathered from PubMed
+    :param pubmed_date: date that indexing information was gathered from PubMed
     :return: cleaned pandas dataframe
     """
     pubmed = pd.read_csv(f"../data/{pubmed_date}_pubmed.csv").rename(
