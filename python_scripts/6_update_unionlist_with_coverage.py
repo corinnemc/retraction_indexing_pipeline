@@ -1,5 +1,5 @@
 """
-This file contains code to update the unionlist with a "Covered_In" column using csv files that note coverage.
+This file contains methods to update the unionlist with a "Covered_In" column using csv files that note coverage.
 
 Functions:
 read_in_unionlist(): reads unionlist into DataFrame and corrects data type issues

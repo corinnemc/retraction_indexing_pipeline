@@ -113,7 +113,7 @@ def query_pubmed_with_doi(pubmed_not_indexed: pd.DataFrame, email: str):
     items_covered_not_indexed = []
 
     for batch in tqdm(identifier_batches):
-        dois = '[ELocationID]" OR "'.join(batch)
+        dois = '" OR "'.join(batch)
             # AID is Article Identifier.
             # "Article ID values supplied by the publisher may include the pii (controlled publisher identifier),
             # doi (digital object identifier), or book accession" https://pubmed.ncbi.nlm.nih.gov/help/
@@ -163,7 +163,7 @@ def main():
     unionlist = read_in_unionlist(unionlist_date='2025-05-08')
     pubmed_not_indexed = gather_pubmed_not_indexed(unionlist=unionlist)
     items_covered_not_indexed = query_pubmed_with_pmid(pubmed_not_indexed=pubmed_not_indexed,
-                                                       email='corinne9@illinois.edu')
+                                                       email='INSERT_EMAIL_HERE')
 
     pubmed_not_in_unionlist = unionlist[
                                 unionlist['PubMedID'].isin(items_covered_not_indexed) &

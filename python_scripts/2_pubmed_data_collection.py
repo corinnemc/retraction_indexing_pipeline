@@ -427,6 +427,6 @@ if __name__ == '__main__':
                           # PubMed can only return 10,000 results per request.
                           # In 2022 there were over 6,000 retractions, so current best practice is year interval of 2.
         term="'Retracted Publication'[PT]",
-        email="corinne9@illinois.edu",
+        email="INSERT_EMAIL_HERE",
         no_records=300
     )
