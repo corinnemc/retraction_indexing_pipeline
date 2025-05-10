@@ -3,7 +3,13 @@ This file contains methods to complete data analysis to create visualizations an
 
 Functions:
 read_in_unionlist(): reads unionlist into DataFrame and corrects data type issues
-partition_by_source():
+partition_by_source(): returns partitioned DataFrames containing items that a given source indexes, covers,
+    covers but does not index, and does not cover
+create_results_table(): aggregates result information using helper function partition_by_source()
+calculate_pairwise_agreement(): calculates pairwise agreement
+create_indexing_upset_plot(): creates UpSet plot for indexing status of unionlist items
+create_coverage_upset_plot(): Creates UpSet plot for coverage status of unionlist items
+main(): runs all data analysis with variable parameters
 """
 import pandas as pd
 import seaborn as sns
@@ -29,7 +35,7 @@ def read_in_unionlist(unionlist_date: str):
 
 def partition_by_source(unionlist: pd.DataFrame, source_name: str):
     """
-    Count total items a given source indexes and covers
+    Count total items that a given source indexes and covers
     :param unionlist: DataFrame of completed unionlist
     :param source_name: source to look up to determine count
 
@@ -52,9 +58,10 @@ def partition_by_source(unionlist: pd.DataFrame, source_name: str):
 
 def create_results_table(unionlist: pd.DataFrame):
     """
-
+    Aggregates result information using helper function partition_by_source
     :param unionlist: dataframe of completed unionlist
-    :return:
+    :return: variables with items indexed, covered, covered and not indexed, and not covered for both Retraction Watch
+    and PubMed. Additionally, aggregate counts saved into csv file.
     """
     (pubmed_indexed,
      pubmed_covered,
@@ -120,9 +127,10 @@ def create_results_table(unionlist: pd.DataFrame):
 
 def calculate_pairwise_agreement(unionlist: pd.DataFrame):
     """
-
-    :param unionlist:
-    :return:
+    Calculates pairwise agreement for two sources, that is
+    (all items both sources index) / (all items both sources cover)
+    :param unionlist: dataframe of completed unionlist
+    :return: pairwise agreement as percentage value
     """
     both_index = unionlist[(unionlist['Indexed_In'].str.contains('Retraction Watch; PubMed', na=False))]
     both_cover = unionlist[(unionlist['Covered_In'].str.contains('Retraction Watch; PubMed', na=False))]
