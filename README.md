@@ -163,7 +163,8 @@ records without DOI, duplicate DOIs removed, and DOI records that also have a Pu
 2. Scroll to the bottom of the file.
 3. Update information in ```main()```:
    - Change ```unionlist_date``` to the current date matching the unionlist file name generated in the 
-previous step.
+previous step. For example:
+     - ```unionlist = read_in_unionlist_without_coverage(unionlist_date='2025-05-08')```
    - Change ```email='INSERT_EMAIL_HERE'``` to a valid email address (e.g. ```email='email@email.com'```)
 4. Run the script
 
