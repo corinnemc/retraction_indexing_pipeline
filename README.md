@@ -112,6 +112,8 @@ the CSV file matches what is shown on the PubMed interface.
 - If a ```<Response 414>``` error occurs, lower the ```no_records``` variable and rerun the script.
 - If a ```<Response 500>``` error occurs, lower the ```no_records``` variable and rerun the script.
 
+This script has taken over 23 minutes to run before.
+
 This will output one file into ```/data/```:
 - ```{current date}_pubmed.csv```: all items indexed as retracted in PubMed
 
