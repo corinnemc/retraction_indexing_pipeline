@@ -75,7 +75,7 @@ in Retraction Watch, covered in PubMed, but not indexed as retracted in PubMed
 and coverage
 - ```{date}_aggregate_results.csv```: total counts of all items indexed as retracted, all items covered, 
 items covered but not indexed as retracted, and items not covered by each source
-- ```indexing_status_upset_plot.png```: UpSet plot showing intersection of indexed items in both sources
+- ```indexing_status_upset_plot.png```: [UpSet plot](https://en.wikipedia.org/wiki/UpSet_plot) showing intersection of indexed items in both sources
 - ```coverage_status_upset_plot.png```: UpSet plot showing intersection of covered items in both sources
 - PLEASE NOTE: Pairwise agreement (a percentage) is shown via terminal output. Pairwise agreement can be calculated by 
 taking (all items indexed in both sources) / (all items covered in both sources) * 100 
