@@ -423,7 +423,6 @@ def get_pubmed_data(start_year: int, end_year: int, interval_year: int, term: st
 def main():
     get_pubmed_data(
         start_year=1950,  # Via the PubMed interface, retracted publications start in 1951
-                          # https://pubmed.ncbi.nlm.nih.gov/?term="Retracted+Publication"[pt]
         end_year=date.today().year,
         interval_year=2,  # Chose a year interval where there are not more than 10,000 results returned;
                           # PubMed can only return 10,000 results per request.
@@ -433,6 +432,8 @@ def main():
         no_records=300
     )
 
+    # Check totals by comparing against the regular PubMed interface for the search term:
+    # https://pubmed.ncbi.nlm.nih.gov/?term="Retracted+Publication"[pt]
 
 if __name__ == '__main__':
     main()

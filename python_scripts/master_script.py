@@ -10,9 +10,9 @@ from f_update_unionlist_with_coverage import *
 from g_data_analysis import *
 
 # Input your email.
-EMAIL = 'corinne9@illinois.edu'
+EMAIL = 'INSERT_EMAIL_HERE'
 # Get most recent commit SHA from https://gitlab.com/crossref/retraction-watch-data
-RETRACTION_WATCH_COMMIT_ID = '28e4670f328f4879ebfbbe2ae66e5f50b0e02184'
+RETRACTION_WATCH_COMMIT_ID = 'INSERT_COMMIT_ID_HERE'
 
 
 def main():
@@ -76,11 +76,11 @@ def main():
     print("This can take some time as the program iterates over thousands of rows.")
     merge_dataframes(unionlist=unionlist,
                      pubmed_covered_not_indexed=pubmed_covered_not_indexed,
-                     unionlist_date=f'{str(date.today())}')
+                     completed_unionlist_date=f'{str(date.today())}')
 
     print("7. Completing data analysis...")
     print("Several FutureWarnings will be displayed. These can be ignored.")
-    unionlist = read_in_unionlist_with_coverage(unionlist_date=f'{str(date.today())}')
+    unionlist = read_in_unionlist_with_coverage(completed_unionlist_date=f'{str(date.today())}')
     (pubmed_indexed,
      pubmed_covered,
      pubmed_covered_not_indexed,

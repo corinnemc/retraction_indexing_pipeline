@@ -40,12 +40,12 @@ def read_in_covered_not_indexed(pubmed_date: str):
     return pubmed_covered_not_indexed
 
 
-def merge_dataframes(unionlist: pd.DataFrame, pubmed_covered_not_indexed: pd.DataFrame, unionlist_date: str):
+def merge_dataframes(unionlist: pd.DataFrame, pubmed_covered_not_indexed: pd.DataFrame, completed_unionlist_date: str):
     """
     Merge unionlist and pubmed_coverednotindexed dataframes to add coverage information to unionlist
     :param unionlist: dataframe of unionlist with only indexing information
     :param pubmed_covered_not_indexed: dataframe of items PubMed covers but does not index as retracted
-    :param unionlist_date: date of current unionlist to be used in saved csv file
+    :param completed_unionlist_date: date of current unionlist to be used in saved csv file
     :return: updated unionlist dataframe with coverage information
     """
     merged_df = pd.merge(unionlist,
@@ -89,7 +89,7 @@ def merge_dataframes(unionlist: pd.DataFrame, pubmed_covered_not_indexed: pd.Dat
 
         fused_df.loc[len(fused_df)] = new_row
 
-    fused_df.to_csv(f'../data/{unionlist_date}_unionlist_with_coverage.csv')
+    fused_df.to_csv(f'../data/{completed_unionlist_date}_unionlist_with_coverage.csv')
 
 
 def main():
@@ -101,7 +101,7 @@ def main():
     print("This can take some time as the program iterates over thousands of rows.")
     merge_dataframes(unionlist=unionlist,
                      pubmed_covered_not_indexed=pubmed_covered_not_indexed,
-                     unionlist_date='2025-05-08')
+                     completed_unionlist_date='2025-05-08')
 
 
 if __name__ == '__main__':

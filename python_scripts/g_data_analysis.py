@@ -18,13 +18,13 @@ from upsetplot import from_contents, plot
 from datetime import date
 
 
-def read_in_unionlist_with_coverage(unionlist_date: str):
+def read_in_unionlist_with_coverage(completed_unionlist_date: str):
     """
     Read unionlist into dataframe and correct datatype issues
-    :param unionlist_date: date of current unionlist
+    :param completed_unionlist_date: date of current unionlist
     :return: unionlist dataframe
     """
-    unionlist = pd.read_csv(f'../data/{unionlist_date}_unionlist_with_coverage.csv')
+    unionlist = pd.read_csv(f'../data/{completed_unionlist_date}_unionlist_with_coverage.csv')
 
     # Address possible pandas datatype issues
     unionlist['PubMedID'] = unionlist['PubMedID'].fillna(0).astype(int).replace(0, '').astype(str).str.strip()
@@ -194,7 +194,7 @@ def create_coverage_upset_plot(pubmed_covered: pd.DataFrame, retraction_watch_co
 
 def main():
     print("Several future warnings will be displayed. These can be ignored.")
-    unionlist = read_in_unionlist_with_coverage(unionlist_date='2025-05-08')
+    unionlist = read_in_unionlist_with_coverage(completed_unionlist_date='2025-05-08')
     (pubmed_indexed,
      pubmed_covered,
      pubmed_covered_not_indexed,
