@@ -221,11 +221,11 @@ persistent identifier unique to a specific item, and two items should not be abl
    - If items did not have a DOI, they were excluded from analysis and saved in a separate file, e.g. 
 ```retraction_watch_recordsnodoi_{date}.csv```
 3. When fusing records for the unionlist, fusion occurred based on DOI, and PubMed metadata was 
-preferred over Retraction Watch metadata. This is because
-PubMed has been show to be more reliable for metadata aside from retraction indexing. See 
+preferred over Retraction Watch metadata. While both PubMed and Retraction Watch had PubMed Identifier (PMID) available, DOI was preferred
+because in context of the larger 11-source pipeline, DOI is the standard identifier used across more databases. Regarding metadata,
+PubMed has been shown to be more reliable for other metadata fields aside from retraction indexing. See 
 [Sebo and Sebo (2025)](https://www.doi.org/10.1080/08989621.2025.2465621), particularly
-their supplemental materials. While both PubMed and Retraction Watch had PubMed Identifier (PMID) available, DOI was preferred
-because in context of the larger 11-source pipeline, DOI is the standard identifier used across more databases.
+their supplemental materials. 
 4. When searching PubMed for coverage information, only items' PMIDs were used, which severely 
 limits the accuracy of PubMed coverage information for items that are only indexed in Retraction Watch. Multiple attempts
 were made to query the PubMed API via DOI, but results returned were inaccurate. As such, coverage information should be
